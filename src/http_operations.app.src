@@ -1,0 +1,14 @@
+
+{application, http_operations, [
+	{description, "Cowboy GET echo example."},
+	{vsn, "1"},
+	{modules, []},
+	{registered, [http_operations_sup]},
+	{applications, [
+		kernel,
+		stdlib,
+		cowboy
+	]},
+	{mod, {http_operations_app, []}},
+	{env, []}
+]}.
