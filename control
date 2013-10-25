@@ -1,0 +1,10 @@
+#!/bin/sh
+
+case $1 in
+     console|con|c)
+	_rel/bin/http_operations console;;
+     upgrade|update|up|u)
+	rm -rf _rel
+	make
+	_rel/bin/http_operations console
+esac
