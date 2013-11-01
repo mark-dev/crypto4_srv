@@ -18,7 +18,9 @@ start(_Type, _Args) ->
 	]),
     Priv = code:priv_dir(http_operations),
 	{ok, _} = cowboy:start_https(http, 100, [{port, 8080},
-						 {fail_if_no_peer_cert, false},
+						 {verify,verify_peer},
+						 {fail_if_no_peer_cert,true},
+						 {cacertfile,Priv ++ "/ca.pem"},
 						 {keyfile,Priv ++ "/key.pem"},
 						 {certfile,Priv ++ "/cert.pem"}], [
 		{env, [{dispatch, Dispatch}]}
