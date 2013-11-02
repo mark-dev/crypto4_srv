@@ -1,0 +1,78 @@
+#!/usr/bin/env escript
+%%! -smp enable
+-mode(compile).
+
+-include_lib("wx/include/wx.hrl").
+-define(ARG1_TEXTFIELD,2).
+-define(ARG2_TEXTFIELD,3).
+-define(BUTTON_CALC,4).
+-define(TEXT_RESULT,5).
+main(_Args) ->
+    inets:start(),
+    ssl:start(),
+    Wx = wx:new(),
+    F=wxFrame:new(Wx, -1, "Erlang wx test"),
+    Arg1=wxTextCtrl:new(F,?ARG1_TEXTFIELD,[{value,"15"},
+					   {pos,{50,100}},
+					   {size,{80,20}}]),
+    Arg2=wxTextCtrl:new(F,?ARG2_TEXTFIELD,[{value,"32"},
+					   {pos,{50,120}},
+					   {size,{80,20}}]),
+    ButtonCalc = wxButton:new(F,?BUTTON_CALC,[{label,"calc"},
+					      {size,{40,20}},
+					      {pos,{150,100}}]),
+    ResultLabel = wxStaticText:new(F,?TEXT_RESULT,"",[
+						      {pos,{50,150}},
+						      {size,{120,20}}
+						     ]),
+    OperationComboBox = wxComboBox:new(F,6,[{pos,{150,120}},
+					    {size,{90,20}},
+					    {value,"plus"},
+					    {choices,["plus",
+						      "minus",
+						      "div",
+						      "mpl"]}
+					    ]),
+    wxFrame:show(F),
+    init_callbacks(F),
+    event_loop(F,Arg1,Arg2,ResultLabel,OperationComboBox).
+
+init_callbacks(F)->
+    wxFrame:connect(F, close_window),
+    wxButton:connect(F,command_button_clicked).
+
+event_loop(F,Arg1,Arg2,ResultLabel,OperationComboBox)->
+    receive
+	#wx{ event = #wxClose{} } ->
+	    ok;
+	#wx{event = #wxCommand{}} ->
+	    Arg1Value = list_to_num(wxTextCtrl:getValue(Arg1)),
+	    Arg2Value = list_to_num(wxTextCtrl:getValue(Arg2)),
+	    Res = get_result(list_to_atom(wxComboBox:getValue(OperationComboBox)),
+			     Arg1Value,
+			     Arg2Value),
+	    wxStaticText:setLabel(ResultLabel,Res),
+	    event_loop(F,Arg1,Arg2,ResultLabel,OperationComboBox);
+	Event ->
+	    io:format("eventLoop: ~p~n", [Event]),
+	    event_loop(F,Arg1,Arg2,ResultLabel,OperationComboBox)
+    end.
+
+
+get_result(Operation,Arg1,Arg2)->
+    Query = io_lib:format("https://localhost:8080/?operation=~s&arg1=~p&arg2=~p",
+			  [Operation,Arg1,Arg2]),
+    Root= "/home/markdev/code/crypto4_srv/priv",
+    {ok,{_,_,Res}} = httpc:request(get, {Query, []}, [{ssl,[{keyfile,Root ++ "/client/key.pem"},
+							    {certfile,Root ++"/client/cert.pem"}
+							   ]}], 
+				   []),
+    Res.
+
+list_to_num(List)->
+    case lists:member($.,List) of
+	true ->
+	    list_to_float(List);
+	false ->
+	    list_to_integer(List)
+    end.
