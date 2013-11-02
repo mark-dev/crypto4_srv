@@ -20,9 +20,9 @@ start(_Type, _Args) ->
 	{ok, _} = cowboy:start_https(http, 100, [{port, 8080},
 						 {verify,verify_peer},
 						 {fail_if_no_peer_cert,true},
-						 {cacertfile,Priv ++ "/ca.pem"},
-						 {keyfile,Priv ++ "/key.pem"},
-						 {certfile,Priv ++ "/cert.pem"}], [
+						 {cacertfile,Priv ++ "/server/ca.pem"},
+						 {keyfile,Priv ++ "/server/key.pem"},
+						 {certfile,Priv ++ "/server/cert.pem"}], [
 		{env, [{dispatch, Dispatch}]}
 	]),
 	http_operations_sup:start_link().
