@@ -7,6 +7,8 @@
 -define(ARG2_TEXTFIELD,3).
 -define(BUTTON_CALC,4).
 -define(TEXT_RESULT,5).
+-define(OPERATION_COMBOBOX,6).
+
 main(_Args) ->
     inets:start(),
     ssl:start(),
@@ -18,21 +20,18 @@ main(_Args) ->
     Arg2=wxTextCtrl:new(F,?ARG2_TEXTFIELD,[{value,"32"},
 					   {pos,{50,120}},
 					   {size,{80,20}}]),
-    ButtonCalc = wxButton:new(F,?BUTTON_CALC,[{label,"calc"},
+    _ButtonCalc = wxButton:new(F,?BUTTON_CALC,[{label,"calc"},
 					      {size,{40,20}},
 					      {pos,{150,100}}]),
-    ResultLabel = wxStaticText:new(F,?TEXT_RESULT,"",[
-						      {pos,{50,150}},
-						      {size,{120,20}}
-						     ]),
-    OperationComboBox = wxComboBox:new(F,6,[{pos,{150,120}},
-					    {size,{90,20}},
-					    {value,"plus"},
-					    {choices,["plus",
-						      "minus",
-						      "div",
-						      "mpl"]}
-					    ]),
+    ResultLabel = wxStaticText:new(F,?TEXT_RESULT,"",[{pos,{50,150}},
+						      {size,{120,20}}]),
+    OperationComboBox = wxComboBox:new(F,?OPERATION_COMBOBOX,[{pos,{150,120}},
+							      {size,{90,20}},
+							      {value,"plus"},
+							      {choices,["plus",
+									"minus",
+									"div",
+									"mpl"]}]),
     wxFrame:show(F),
     init_callbacks(F),
     event_loop(F,Arg1,Arg2,ResultLabel,OperationComboBox).
@@ -46,11 +45,9 @@ event_loop(F,Arg1,Arg2,ResultLabel,OperationComboBox)->
 	#wx{ event = #wxClose{} } ->
 	    ok;
 	#wx{event = #wxCommand{}} ->
-	    Arg1Value = list_to_num(wxTextCtrl:getValue(Arg1)),
-	    Arg2Value = list_to_num(wxTextCtrl:getValue(Arg2)),
-	    Res = get_result(list_to_atom(wxComboBox:getValue(OperationComboBox)),
-			     Arg1Value,
-			     Arg2Value),
+	    Res = get_result(wxComboBox:getValue(OperationComboBox),
+			     wxTextCtrl:getValue(Arg1),
+			     wxTextCtrl:getValue(Arg2)),
 	    wxStaticText:setLabel(ResultLabel,Res),
 	    event_loop(F,Arg1,Arg2,ResultLabel,OperationComboBox);
 	Event ->
@@ -60,19 +57,12 @@ event_loop(F,Arg1,Arg2,ResultLabel,OperationComboBox)->
 
 
 get_result(Operation,Arg1,Arg2)->
-    Query = io_lib:format("https://localhost:8080/?operation=~s&arg1=~p&arg2=~p",
+    Query = io_lib:format("https://localhost:8080/?operation=~s&arg1=~s&arg2=~s",
 			  [Operation,Arg1,Arg2]),
-    Root= "/home/markdev/code/crypto4_srv/priv",
-    {ok,{_,_,Res}} = httpc:request(get, {Query, []}, [{ssl,[{keyfile,Root ++ "/client/key.pem"},
-							    {certfile,Root ++"/client/cert.pem"}
-							   ]}], 
-				   []),
+    Root = "/home/markdev/code/crypto4_srv/priv",
+    SSLOpts =  [{verify,verify_peer},
+		{cacertfile,filename:join([Root,"client2","ca.pem"])},
+		{keyfile,filename:join([Root,"client","key.pem"])},
+		{certfile,filename:join([Root,"client","cert.pem"])}], 
+    {ok,{_,_,Res}} = httpc:request(get, {Query, []}, [{ssl,SSLOpts}],[]),
     Res.
-
-list_to_num(List)->
-    case lists:member($.,List) of
-	true ->
-	    list_to_float(List);
-	false ->
-	    list_to_integer(List)
-    end.
